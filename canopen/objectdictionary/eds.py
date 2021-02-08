@@ -201,6 +201,10 @@ def build_variable(eds, section, node_id, index, subindex=0):
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
+    if eds.has_option(section, "ObjFlags"):
+        objflags = eds.get(section, "ObjFlags")
+        if objflags is not '':
+            var.objflags = int(objflags, 0)
     return var
 
 

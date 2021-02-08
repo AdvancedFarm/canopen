@@ -68,6 +68,33 @@ DataType=0x0005
 AccessType=ro
 PDOMapping=1
 
+[1010]
+SubNumber=2
+ObjectType=9
+ParameterName=Store command
+
+[1010sub0]
+ParameterName=Number of entries
+ParameterValue=0x01
+ObjectType=7
+DataType=5
+AccessType=ro
+LowLimit=0
+HighLimit=0xFF
+PDOMapping=0
+DefaultValue=1
+
+[1010sub1]
+ParameterName=Save all parameters
+ParameterValue=0x00000001
+ObjectType=7
+DataType=7
+AccessType=rw
+LowLimit=0x65766173
+HighLimit=0x65766173
+PDOMapping=0
+ObjFlags=0x1
+
 [1018]
 ParameterName=Identity object
 ObjectType=0x9

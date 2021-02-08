@@ -272,6 +272,8 @@ class Variable(object):
         self.bit_definitions = {}
         #: Storage location of index
         self.storage_location = None
+        #: ObjectFlags defined in DSP306 (4.5.3.2 Specific Flags)
+        self.objflags = None
 
     def __eq__(self, other):
         return (self.index == other.index and
@@ -290,6 +292,20 @@ class Variable(object):
     @property
     def readable(self):
         return "r" in self.access_type or self.access_type == "const"
+
+    @property
+    def refuse_write_on_download(self):
+        if self.objflags is None:
+            return False
+        else:
+            return self.objflags & 0x01 > 0
+
+    @property
+    def refuse_read_on_scan(self):
+        if self.objflags is None:
+            return False
+        else:
+            return self.objflags & 0x02 > 0
 
     def add_value_description(self, value, descr):
         """Associate a value with a string description.

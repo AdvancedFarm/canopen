@@ -90,3 +90,7 @@ class TestEDS(unittest.TestCase):
     def test_dummy_variable_undefined(self):
         with self.assertRaises(KeyError):
             var_undef = self.od['Dummy0001']
+
+    def test_object_flags(self):
+        var = self.od[0x1010][1]
+        self.assertTrue(var.refuse_write_on_download)
