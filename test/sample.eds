@@ -668,6 +668,22 @@ AccessType=RW
 PDOMapping=0
 DefaultValue=0
 
+[1a00sub5]
+ParameterName=TPDO 1 mapping information 5
+ObjectType=7
+DataType=7
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
+[1a00sub6]
+ParameterName=TPDO 1 mapping information 6
+ObjectType=7
+DataType=7
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
 [1a01]
 ParameterName=Transmit PDO 2 mapping parameter
 ObjectType=9
@@ -916,3 +932,41 @@ DataType=0x0008
 AccessType=ro
 DefaultValue=0
 PDOMapping=1
+
+[6040]
+ParameterName=controlword
+ObjectType=7
+DataType=6
+AccessType=rww
+LowLimit=0
+HighLimit=0xFFFF
+PDOMapping=1
+ObjFlags=0x1
+
+[6041]
+ParameterName=statusword
+ObjectType=7
+DataType=6
+AccessType=ro
+LowLimit=0
+HighLimit=0xFFFF
+PDOMapping=1
+
+[606C]
+ParameterName=Velocity
+ObjectType=7
+DataType=4
+AccessType=ro
+LowLimit=-20000
+HighLimit=20000
+PDOMapping=1
+
+[60FF]
+ParameterName=Target speed
+ObjectType=7
+DataType=4
+AccessType=rww
+LowLimit=-20000
+HighLimit=20000
+PDOMapping=1
+ObjFlags=0x1

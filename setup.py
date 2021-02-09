@@ -29,5 +29,8 @@ setup(
         "db_export": ["canmatrix"]
     },
     setup_requires=["setuptools_scm"],
-    include_package_data=True
+    include_package_data=True,
+    entry_points={
+        "console_scripts": ["dcf_tool = canopen.dcf_tool:main"]
+   },
 )
