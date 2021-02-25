@@ -113,61 +113,16 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class Maps(Mapping):
-    """A collection of transmit or receive maps."""
-
-    def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
-        """
-        :param com_offset:
-        :param map_offset:
-        :param pdo_node:
-        :param cob_base:
-        """
-        self.maps = {}
-        for map_no in range(512):
-            if com_offset + map_no in pdo_node.node.object_dictionary:
-                new_map = Map(
-                    pdo_node,
-                    pdo_node.node.sdo[com_offset + map_no],
-                    pdo_node.node.sdo[map_offset + map_no])
-                # Generate default COB-IDs for predefined connection set
-                if cob_base is not None and map_no < 4:
-                    new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
-                self.maps[map_no + 1] = new_map
-
-    def __getitem__(self, key):
-        return self.maps[key]
-
-    def __iter__(self):
-        return iter(self.maps)
-
-    def __len__(self):
-        return len(self.maps)
-
-
-class Map(object):
+class MapBase(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_record, map_array):
+    def __init__(self, pdo_node, com_offset, map_offset):
         self.pdo_node = pdo_node
-        self.com_record = com_record
-        self.map_array = map_array
-        #: If this map is valid
-        self.enabled = False
-        #: COB-ID for this PDO
-        self.cob_id = None
-        #: Default COB-ID if this PDO is part of the pre-defined connection set
-        self.predefined_cob_id = None
-        #: Is the remote transmit request (RTR) allowed for this PDO
-        self.rtr_allowed = True
-        #: Transmission type (0-255)
-        self.trans_type = None
-        #: Inhibit Time (optional) (in 100us)
-        self.inhibit_time = None
-        #: Event timer (optional) (in ms)
-        self.event_timer = None
-        #: Ignores SYNC objects up to this SYNC counter value (optional)
-        self.sync_start_value = None
+        self.com_offset = com_offset
+        self.map_offset = map_offset
+        self.com_record = pdo_node.node.sdo[com_offset]
+        self.map_array = pdo_node.node.sdo[map_offset]
+
         #: List of variables mapped to this PDO
         self.map = []
         self.length = 0
@@ -181,6 +136,34 @@ class Map(object):
         self.receive_condition = threading.Condition()
         self.is_received = False
         self._task = None
+
+    @property
+    def cob_id(self):
+        #: COB-ID for this PDO
+        return self.pdo_node.node.object_dictionary[self.com_offset][1].value
+
+    @cob_id.setter
+    def cob_id(self, val):
+        self.pdo_node.node.object_dictionary[self.com_offset][1].value = val
+
+    @property
+    def enabled(self):
+        #: If this map is valid
+        return self.cob_id & PDO_NOT_VALID == 0
+
+    @property
+    def rtr_allowed(self):
+        #: Is the remote transmit request (RTR) allowed for this PDO
+        return self.cob_id & RTR_NOT_ALLOWED == 0
+
+    @property
+    def trans_type(self):
+        #: Transmission type (0-255)
+        return self.pdo_node.node.object_dictionary[self.com_offset][2].value
+
+    @trans_type.setter
+    def trans_type(self, val):
+        self.pdo_node.node.object_dictionary[self.com_offset][2].value = val
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -284,14 +267,226 @@ class Map(object):
         """
         self.callbacks.append(callback)
 
+    def clear(self):
+        """Clear all variables from this map."""
+        self.map = []
+        self.length = 0
+
+    def add_variable(self, index, subindex=0, length=None):
+        """Add a variable from object dictionary as the next entry.
+
+        :param index: Index of variable as name or number
+        :param subindex: Sub-index of variable as name or number
+        :param int length: Size of data in number of bits
+        :type index: :class:`str` or :class:`int`
+        :type subindex: :class:`str` or :class:`int`
+        :return: Variable that was added
+        :rtype: canopen.pdo.Variable
+        """
+        try:
+            var = self._get_variable(index, subindex)
+            if subindex and isinstance(subindex, int):
+                # Force given subindex upon variable mapping, for misguided implementations
+                var.subindex = subindex
+            var.offset = self.length
+            if length is not None:
+                # Custom bit length
+                var.length = length
+            # We want to see the bit fields within the PDO
+            start_bit = var.offset
+            end_bit = start_bit + var.length - 1
+            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+                        var.name, var.index, var.subindex, start_bit, end_bit)
+            self.map.append(var)
+            self.length += var.length
+        except KeyError as exc:
+            logger.warning("%s", exc)
+            var = None
+        self._update_data_size()
+        if self.length > 64:
+            logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
+        return var
+
+    def transmit(self):
+        """Transmit the message once."""
+        self.pdo_node.network.send_message(self.cob_id, self.data)
+
+    def start(self, period=None):
+        """Start periodic transmission of message in a background thread.
+
+        :param float period: Transmission period in seconds
+        """
+        if period is not None:
+            self.period = period
+
+        if not self.period:
+            raise ValueError("A valid transmission period has not been given")
+        logger.info("Starting %s with a period of %s seconds", self.name, self.period)
+
+        self._task = self.pdo_node.network.send_periodic(
+            self.cob_id, self.data, self.period)
+
+    def stop(self):
+        """Stop transmission."""
+        if self._task is not None:
+            self._task.stop()
+            self._task = None
+
+    def update(self):
+        """Update periodic message with new data."""
+        if self._task is not None:
+            self._task.update(self.data)
+
+    def remote_request(self):
+        """Send a remote request for the transmit PDO.
+        Silently ignore if not allowed.
+        """
+        if self.enabled and self.rtr_allowed:
+            self.pdo_node.network.send_message(self.cob_id, None, remote=True)
+
+    def wait_for_reception(self, timeout=10):
+        """Wait for the next transmit PDO.
+
+        :param float timeout: Max time to wait in seconds.
+        :return: Timestamp of message received or None if timeout.
+        :rtype: float
+        """
+        with self.receive_condition:
+            self.is_received = False
+            self.receive_condition.wait(timeout)
+        return self.timestamp if self.is_received else None
+
+
+class RPDOMap(MapBase):
+    def __init__(self, pdo_node, com_offset, map_offset):
+        super(RPDOMap, self).__init__(pdo_node, com_offset, map_offset)
+
     def read(self):
         """Read PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
-        self.cob_id = cob_id & 0x1FFFFFFF
+        self.cob_id = self.com_record[1].raw
         logger.info("COB-ID is 0x%X", self.cob_id)
-        self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
-        self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
+        logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
+        self.trans_type = self.com_record[2].raw
+        logger.info("Transmission type is %d", self.trans_type)
+
+        self.clear()
+        nof_entries = self.map_array[0].raw
+        for subindex in range(1, nof_entries + 1):
+            value = self.map_array[subindex].raw
+            index = value >> 16
+            subindex = (value >> 8) & 0xFF
+            size = value & 0xFF
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                index = value & 0xFFFF
+                subindex = (value >> 16) & 0xFF
+                size = (value >> 24) & 0xFF
+            if index and size:
+                self.add_variable(index, subindex, size)
+
+    def save(self):
+        """Save PDO configuration for this map using SDO."""
+        logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
+                    self.cob_id)
+        self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
+        if self.trans_type is not None:
+            logger.info("Setting transmission type to %d", self.trans_type)
+            self.com_record[2].raw = self.trans_type
+
+        if self.map is not None:
+            try:
+                self.map_array[0].raw = 0
+            except SdoAbortedError:
+                # WORKAROUND for broken implementations: If the array has a
+                # fixed number of entries (count not writable), generate dummy
+                # mappings for an invalid object 0x0000:00 to overwrite any
+                # excess entries with all-zeros.
+                self._fill_map(self.map_array[0].raw)
+            subindex = 1
+            for var in self.map:
+                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
+                            var.name, var.index, var.subindex, var.length)
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                    self.map_array[subindex].raw = (var.index |
+                                                    var.subindex << 16 |
+                                                    var.length << 24)
+                else:
+                    self.map_array[subindex].raw = (var.index << 16 |
+                                                    var.subindex << 8 |
+                                                    var.length)
+                subindex += 1
+            try:
+                self.map_array[0].raw = len(self.map)
+            except SdoAbortedError as e:
+                # WORKAROUND for broken implementations: If the array
+                # number-of-entries parameter is not writable, we have already
+                # generated the required number of mappings above.
+                if e.code != 0x06010002:
+                    # Abort codes other than "Attempt to write a read-only
+                    # object" should still be reported.
+                    raise
+            self._update_data_size()
+
+        if self.enabled:
+            logger.info("Enabling PDO")
+            self.com_record[1].raw = self.cob_id
+
+    def __repr__(self):
+        if self.cob_id is None:
+            return "PDO: Empty"
+        msg = "CobId: 0x{:08x}\n".format(self.cob_id)
+        msg += "Enabled: {}\n".format(self.enabled)
+        msg += "RTR: {}\n".format(self.rtr_allowed)
+        msg += "TransType: {}\n".format(self.trans_type)
+        msg += "Map: [{}]".format('\n\t'.join(self.map))
+        return msg
+
+
+class TPDOMap(MapBase):
+    def __init__(self, pdo_node, com_offset, map_offset):
+        super(TPDOMap, self).__init__(pdo_node, com_offset, map_offset)
+
+    @property
+    def inhibit_time(self):
+        #: Inhibit Time (optional) (in 100us)
+        try:
+            return self.pdo_node.node.object_dictionary[self.com_offset][3].value
+        except KeyError:
+            return None
+
+    @inhibit_time.setter
+    def inhibit_time(self, val):
+        self.pdo_node.node.object_dictionary[self.com_offset][3].value = val
+
+    @property
+    def event_timer(self):
+        #: Event timer (optional) (in ms)
+        try:
+            return self.pdo_node.node.object_dictionary[self.com_offset][5].value
+        except KeyError:
+            return None
+
+    @event_timer.setter
+    def event_timer(self, val):
+        self.pdo_node.node.object_dictionary[self.com_offset][5].value = val
+
+    @property
+    def sync_start_value(self):
+        #: Ignores SYNC objects up to this SYNC counter value (optional)
+        try:
+            return self.pdo_node.node.object_dictionary[self.com_offset][6].value
+        except:
+            return None
+
+    @sync_start_value.setter
+    def sync_start_value(self, val):
+        self.pdo_node.node.object_dictionary[self.com_offset][6].value = val
+
+    def read(self):
+        """Read PDO configuration for this map using SDO."""
+        self.cob_id = self.com_record[1].raw
+        logger.info("COB-ID is 0x%X", self.cob_id)
+        logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = self.com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
@@ -392,94 +587,17 @@ class Map(object):
 
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
-    def clear(self):
-        """Clear all variables from this map."""
-        self.map = []
-        self.length = 0
-
-    def add_variable(self, index, subindex=0, length=None):
-        """Add a variable from object dictionary as the next entry.
-
-        :param index: Index of variable as name or number
-        :param subindex: Sub-index of variable as name or number
-        :param int length: Size of data in number of bits
-        :type index: :class:`str` or :class:`int`
-        :type subindex: :class:`str` or :class:`int`
-        :return: Variable that was added
-        :rtype: canopen.pdo.Variable
-        """
-        try:
-            var = self._get_variable(index, subindex)
-            if subindex and isinstance(subindex, int):
-                # Force given subindex upon variable mapping, for misguided implementations
-                var.subindex = subindex
-            var.offset = self.length
-            if length is not None:
-                # Custom bit length
-                var.length = length
-            # We want to see the bit fields within the PDO
-            start_bit = var.offset
-            end_bit = start_bit + var.length - 1
-            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
-                        var.name, var.index, var.subindex, start_bit, end_bit)
-            self.map.append(var)
-            self.length += var.length
-        except KeyError as exc:
-            logger.warning("%s", exc)
-            var = None
-        self._update_data_size()
-        if self.length > 64:
-            logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
-        return var
-
-    def transmit(self):
-        """Transmit the message once."""
-        self.pdo_node.network.send_message(self.cob_id, self.data)
-
-    def start(self, period=None):
-        """Start periodic transmission of message in a background thread.
-
-        :param float period: Transmission period in seconds
-        """
-        if period is not None:
-            self.period = period
-
-        if not self.period:
-            raise ValueError("A valid transmission period has not been given")
-        logger.info("Starting %s with a period of %s seconds", self.name, self.period)
-
-        self._task = self.pdo_node.network.send_periodic(
-            self.cob_id, self.data, self.period)
-
-    def stop(self):
-        """Stop transmission."""
-        if self._task is not None:
-            self._task.stop()
-            self._task = None
-
-    def update(self):
-        """Update periodic message with new data."""
-        if self._task is not None:
-            self._task.update(self.data)
-
-    def remote_request(self):
-        """Send a remote request for the transmit PDO.
-        Silently ignore if not allowed.
-        """
-        if self.enabled and self.rtr_allowed:
-            self.pdo_node.network.send_message(self.cob_id, None, remote=True)
-
-    def wait_for_reception(self, timeout=10):
-        """Wait for the next transmit PDO.
-
-        :param float timeout: Max time to wait in seconds.
-        :return: Timestamp of message received or None if timeout.
-        :rtype: float
-        """
-        with self.receive_condition:
-            self.is_received = False
-            self.receive_condition.wait(timeout)
-        return self.timestamp if self.is_received else None
+    def __repr__(self):
+        if self.cob_id is None:
+            return "PDO: Empty"
+        msg = "CobId: 0x{:08x}\n".format(self.cob_id)
+        msg += "Enabled: {}\n".format(self.enabled)
+        msg += "RTR: {}\n".format(self.rtr_allowed)
+        msg += "TransType: {}\n".format(self.trans_type)
+        msg += "InhibitTime: {}\n".format(self.inhibit_time)
+        msg += "Timer: {}\n".format(self.event_timer)
+        msg += "Map: [{}]".format('\n\t'.join(self.map))
+        return msg
 
 
 class Variable(variable.Variable):

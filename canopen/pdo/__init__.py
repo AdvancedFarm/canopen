@@ -1,4 +1,4 @@
-from .base import PdoBase, Maps, Map, Variable
+from .base import PdoBase, RPDOMap, TPDOMap, Variable
 
 import logging
 import itertools
@@ -33,9 +33,18 @@ class RPDO(PdoBase):
     Properties 0x1400 to 0x1403 | Mapping 0x1600 to 0x1603.
     :param object node: Parent node for this object."""
 
-    def __init__(self, node):
+    def __init__(self, node, com_offset=0x1400, map_offset=0x1600):
         super(RPDO, self).__init__(node)
-        self.map = Maps(0x1400, 0x1600, self, 0x200)
+        self.map = {}
+        for map_no in range(512):
+            if com_offset + map_no in node.object_dictionary:
+                new_map = RPDOMap(
+                    self,
+                    com_offset + map_no,
+                    map_offset + map_no)
+
+                self.map[map_no + 1] = new_map
+
         logger.debug('RPDO Map as {0}'.format(len(self.map)))
 
     def __repr__(self):
@@ -56,9 +65,18 @@ class TPDO(PdoBase):
     """PDO specialization for the Transmit PDO enabling the transfer of data from the node to the master.
     Properties 0x1800 to 0x1803 | Mapping 0x1A00 to 0x1A03."""
 
-    def __init__(self, node):
+    def __init__(self, node, com_offset=0x1800, map_offset=0x1A00):
         super(TPDO, self).__init__(node)
-        self.map = Maps(0x1800, 0x1A00, self, 0x180)
+        self.map = {}
+        for map_no in range(512):
+            if com_offset + map_no in node.object_dictionary:
+                new_map = TPDOMap(
+                    self,
+                    com_offset + map_no,
+                    map_offset + map_no)
+
+                self.map[map_no + 1] = new_map
+
         logger.debug('TPDO Map as {0}'.format(len(self.map)))
 
     def __repr__(self):
