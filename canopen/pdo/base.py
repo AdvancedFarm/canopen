@@ -493,6 +493,15 @@ class Variable(variable.Variable):
         self.length = len(od)
         variable.Variable.__init__(self, od)
 
+    @property
+    def length(self):
+        return self._length
+
+    @length.setter
+    def length(self, val):
+        assert val < 256
+        self._length = int(val)
+
     def get_data(self):
         """Reads the PDO variable from the last received message.
 
