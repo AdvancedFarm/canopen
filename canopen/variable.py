@@ -24,6 +24,9 @@ class Variable(object):
         #: Holds a local, overridable copy of the Object Subindex
         self.subindex = od.subindex
 
+    def __repr__(self):
+        return "{:04x}:{:02x} {}".format(self.index, self.subindex, self.name)
+
     def get_data(self):
         raise NotImplementedError("Variable is not readable")
 
