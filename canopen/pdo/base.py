@@ -120,14 +120,12 @@ class MapBase(object):
         self.pdo_node = pdo_node
         self.com_offset = com_offset
         self.map_offset = map_offset
+
         self.com_record = pdo_node.node.sdo[com_offset]
         self.map_array = pdo_node.node.sdo[map_offset]
 
-        #: List of variables mapped to this PDO
-        self.map = []
-        self.length = 0
-        #: Current message data
-        self.data = bytearray()
+        #: Construct the data byte array
+        self._update_data_size()
         #: Timestamp of last received message
         self.timestamp = None
         #: Period of receive message transmission in seconds
@@ -164,6 +162,47 @@ class MapBase(object):
     @trans_type.setter
     def trans_type(self, val):
         self.pdo_node.node.object_dictionary[self.com_offset][2].value = val
+
+    @property
+    def num_entries(self):
+        #: Number of mapped objects
+        num_entries = self.pdo_node.node.object_dictionary[self.map_offset][0].value
+        if num_entries is None:
+            num_entries = 0
+        return num_entries
+
+    @property
+    def length(self):
+        return sum([x.length for x in self.map])
+
+    @property
+    def map(self):
+        ''' The idea here is to construct the pdo map from the object dictionary so we maintain
+        a single source of truth: the object dictionary
+        '''
+        entries = []
+        num_bits = 0
+        var_offset = 0
+        for subindex in range(1, self.num_entries + 1):
+            map_entry = self.pdo_node.node.object_dictionary[self.map_offset][subindex].value
+            index = map_entry >> 16
+            subindex = (map_entry >> 8) & 0xFF
+            size = map_entry & 0xFF
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                index = map_entry & 0xFFFF
+                subindex = (map_entry >> 16) & 0xFF
+                size = (map_entry >> 24) & 0xFF
+            if index and size:
+                var = self._get_variable(index, subindex)
+                if subindex and isinstance(subindex, int):
+                    # Force given subindex upon variable mapping, for misguided implementations
+                    var.subindex = subindex
+                #overwrite the var size with the custom size in the mapping
+                var.length = size
+                var.offset = var_offset
+                var_offset += var.length
+                entries.append(var)
+        return entries
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -269,8 +308,7 @@ class MapBase(object):
 
     def clear(self):
         """Clear all variables from this map."""
-        self.map = []
-        self.length = 0
+        self.pdo_node.node.object_dictionary[self.map_offset][0].value = 0
 
     def add_variable(self, index, subindex=0, length=None):
         """Add a variable from object dictionary as the next entry.
@@ -283,6 +321,12 @@ class MapBase(object):
         :return: Variable that was added
         :rtype: canopen.pdo.Variable
         """
+        map_num = self.num_entries + 1
+        #do we have enough maps?
+        max_num_maps = len(self.pdo_node.node.object_dictionary[self.map_offset])
+        if map_num > max_num_maps:
+            raise Exception("No more map entries available for this PDO")
+
         try:
             var = self._get_variable(index, subindex)
             if subindex and isinstance(subindex, int):
@@ -292,19 +336,32 @@ class MapBase(object):
             if length is not None:
                 # Custom bit length
                 var.length = length
+
+            new_len = self.length + var.length
+            if new_len > 64:
+                raise Exception("Max size of PDO exceeded ({} > 64)".format(new_len))
+
+            #update the next available map
+            map_entry = var.index << 16
+            map_entry |= ((var.subindex & 0xFF) << 8)
+            map_entry |= var.length
+            self.pdo_node.node.object_dictionary[self.map_offset][map_num].value = map_entry
+
+            #update the number of mapped objects
+            self.pdo_node.node.object_dictionary[self.map_offset][0].value = map_num
+
+            self._update_data_size()
+
             # We want to see the bit fields within the PDO
             start_bit = var.offset
             end_bit = start_bit + var.length - 1
-            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+            logger.info("Added %s (0x%X:%d) at bits %d - %d to PDO map",
                         var.name, var.index, var.subindex, start_bit, end_bit)
-            self.map.append(var)
-            self.length += var.length
+
         except KeyError as exc:
             logger.warning("%s", exc)
             var = None
-        self._update_data_size()
-        if self.length > 64:
-            logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
+
         return var
 
     def transmit(self):
@@ -438,7 +495,12 @@ class RPDOMap(MapBase):
         msg += "Enabled: {}\n".format(self.enabled)
         msg += "RTR: {}\n".format(self.rtr_allowed)
         msg += "TransType: {}\n".format(self.trans_type)
-        msg += "Map: [{}]".format('\n\t'.join(self.map))
+        if len(self.map) > 0:
+            maps_str = '\n\t' + '\n\t'.join([str(x) for x in self.map]) + '\n'
+        else:
+            maps_str = ''
+        msg += "Map: [{}]".format(maps_str)
+        msg += '\n'
         return msg
 
 
@@ -596,7 +658,12 @@ class TPDOMap(MapBase):
         msg += "TransType: {}\n".format(self.trans_type)
         msg += "InhibitTime: {}\n".format(self.inhibit_time)
         msg += "Timer: {}\n".format(self.event_timer)
-        msg += "Map: [{}]".format('\n\t'.join(self.map))
+        if len(self.map) > 0:
+            maps_str = '\n\t' + '\n\t'.join([str(x) for x in self.map]) + '\n'
+        else:
+            maps_str = ''
+        msg += "Map: [{}]".format(maps_str)
+        msg += '\n'
         return msg
 
 
