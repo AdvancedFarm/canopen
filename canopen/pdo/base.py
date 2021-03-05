@@ -149,10 +149,24 @@ class MapBase(object):
         #: If this map is valid
         return self.cob_id & PDO_NOT_VALID == 0
 
+    @enabled.setter
+    def enabled(self, enable):
+        if enable:
+            self.cob_id &= ~PDO_NOT_VALID
+        else:
+            self.cob_id |= PDO_NOT_VALID
+
     @property
     def rtr_allowed(self):
         #: Is the remote transmit request (RTR) allowed for this PDO
         return self.cob_id & RTR_NOT_ALLOWED == 0
+
+    @rtr_allowed.setter
+    def rtr_allowed(self, enable):
+        if enable:
+            self.cob_id &= ~RTR_NOT_ALLOWED
+        else:
+            self.cob_id |= RTR_NOT_ALLOWED
 
     @property
     def trans_type(self):
