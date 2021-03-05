@@ -138,11 +138,11 @@ class MapBase(object):
     @property
     def cob_id(self):
         #: COB-ID for this PDO
-        return self.pdo_node.node.object_dictionary[self.com_offset][1].value
+        return self.pdo_node.node.od[self.com_offset][1].value
 
     @cob_id.setter
     def cob_id(self, val):
-        self.pdo_node.node.object_dictionary[self.com_offset][1].value = val
+        self.pdo_node.node.od[self.com_offset][1].value = val
 
     @property
     def enabled(self):
@@ -171,16 +171,16 @@ class MapBase(object):
     @property
     def trans_type(self):
         #: Transmission type (0-255)
-        return self.pdo_node.node.object_dictionary[self.com_offset][2].value
+        return self.pdo_node.node.od[self.com_offset][2].value
 
     @trans_type.setter
     def trans_type(self, val):
-        self.pdo_node.node.object_dictionary[self.com_offset][2].value = val
+        self.pdo_node.node.od[self.com_offset][2].value = val
 
     @property
     def num_entries(self):
         #: Number of mapped objects
-        num_entries = self.pdo_node.node.object_dictionary[self.map_offset][0].value
+        num_entries = self.pdo_node.node.od[self.map_offset][0].value
         if num_entries is None:
             num_entries = 0
         return num_entries
@@ -198,7 +198,7 @@ class MapBase(object):
         num_bits = 0
         var_offset = 0
         for subindex in range(1, self.num_entries + 1):
-            map_entry = self.pdo_node.node.object_dictionary[self.map_offset][subindex].value
+            map_entry = self.pdo_node.node.od[self.map_offset][subindex].value
             index = map_entry >> 16
             subindex = (map_entry >> 8) & 0xFF
             size = map_entry & 0xFF
@@ -260,7 +260,7 @@ class MapBase(object):
         return len(self.map)
 
     def _get_variable(self, index, subindex):
-        obj = self.pdo_node.node.object_dictionary[index]
+        obj = self.pdo_node.node.od[index]
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
             obj = obj[subindex]
         var = Variable(obj)
@@ -322,7 +322,7 @@ class MapBase(object):
 
     def clear(self):
         """Clear all variables from this map."""
-        self.pdo_node.node.object_dictionary[self.map_offset][0].value = 0
+        self.pdo_node.node.od[self.map_offset][0].value = 0
 
     def add_variable(self, index, subindex=0, length=None):
         """Add a variable from object dictionary as the next entry.
@@ -337,7 +337,7 @@ class MapBase(object):
         """
         map_num = self.num_entries + 1
         #do we have enough maps?
-        max_num_maps = len(self.pdo_node.node.object_dictionary[self.map_offset])
+        max_num_maps = len(self.pdo_node.node.od[self.map_offset])
         if map_num > max_num_maps:
             raise Exception("No more map entries available for this PDO")
 
@@ -359,10 +359,10 @@ class MapBase(object):
             map_entry = var.index << 16
             map_entry |= ((var.subindex & 0xFF) << 8)
             map_entry |= var.length
-            self.pdo_node.node.object_dictionary[self.map_offset][map_num].value = map_entry
+            self.pdo_node.node.od[self.map_offset][map_num].value = map_entry
 
             #update the number of mapped objects
-            self.pdo_node.node.object_dictionary[self.map_offset][0].value = map_num
+            self.pdo_node.node.od[self.map_offset][0].value = map_num
 
             self._update_data_size()
 
@@ -526,37 +526,37 @@ class TPDOMap(MapBase):
     def inhibit_time(self):
         #: Inhibit Time (optional) (in 100us)
         try:
-            return self.pdo_node.node.object_dictionary[self.com_offset][3].value
+            return self.pdo_node.node.od[self.com_offset][3].value
         except KeyError:
             return None
 
     @inhibit_time.setter
     def inhibit_time(self, val):
-        self.pdo_node.node.object_dictionary[self.com_offset][3].value = val
+        self.pdo_node.node.od[self.com_offset][3].value = val
 
     @property
     def event_timer(self):
         #: Event timer (optional) (in ms)
         try:
-            return self.pdo_node.node.object_dictionary[self.com_offset][5].value
+            return self.pdo_node.node.od[self.com_offset][5].value
         except KeyError:
             return None
 
     @event_timer.setter
     def event_timer(self, val):
-        self.pdo_node.node.object_dictionary[self.com_offset][5].value = val
+        self.pdo_node.node.od[self.com_offset][5].value = val
 
     @property
     def sync_start_value(self):
         #: Ignores SYNC objects up to this SYNC counter value (optional)
         try:
-            return self.pdo_node.node.object_dictionary[self.com_offset][6].value
+            return self.pdo_node.node.od[self.com_offset][6].value
         except:
             return None
 
     @sync_start_value.setter
     def sync_start_value(self, val):
-        self.pdo_node.node.object_dictionary[self.com_offset][6].value = val
+        self.pdo_node.node.od[self.com_offset][6].value = val
 
     def read(self):
         """Read PDO configuration for this map using SDO."""
