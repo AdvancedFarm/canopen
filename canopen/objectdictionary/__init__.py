@@ -155,6 +155,9 @@ class Record(MutableMapping):
     def __eq__(self, other):
         return self.index == other.index
 
+    def __repr__(self):
+        return "Record 0x{:04x} {}".format(self.index, self.name)
+
     def add_member(self, variable):
         """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
@@ -212,6 +215,9 @@ class Array(Mapping):
 
     def __eq__(self, other):
         return self.index == other.index
+
+    def __repr__(self):
+        return "Array 0x{:04x} {}".format(self.index, self.name)
 
     def add_member(self, variable):
         """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
@@ -284,6 +290,9 @@ class Variable(object):
             return self.STRUCT_TYPES[self.data_type].size * 8
         else:
             return 8
+
+    def __repr__(self):
+        return "Variable 0x{:04x}:{:02x} {}".format(self.index, self.subindex, self.name)
 
     @property
     def writable(self):
