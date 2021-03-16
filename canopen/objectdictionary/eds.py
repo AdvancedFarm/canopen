@@ -72,6 +72,7 @@ def import_eds(source, node_id):
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
                 last_subindex.data_type = objectdictionary.UNSIGNED8
+                last_subindex.access_type = 'ro'
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 arr.storage_location = storage_location
