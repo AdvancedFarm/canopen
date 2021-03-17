@@ -143,7 +143,7 @@ PDOMapping=0
 ParameterValue=0x0000
 
 [1400]
-ParameterName=Receive PDO 0 Communication Parameter
+ParameterName=Receive PDO 1 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -176,7 +176,7 @@ LowLimit=0
 HighLimit=255
 
 [1401]
-ParameterName=Receive PDO 1 Communication Parameter
+ParameterName=Receive PDO 2 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -209,7 +209,7 @@ LowLimit=0
 HighLimit=255
 
 [1402]
-ParameterName=Receive PDO 2 Communication Parameter
+ParameterName=Receive PDO 3 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -242,7 +242,7 @@ LowLimit=0
 HighLimit=255
 
 [1403]
-ParameterName=Receive PDO 3 Communication Parameter
+ParameterName=Receive PDO 4 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -275,7 +275,7 @@ LowLimit=0
 HighLimit=255
 
 [1600]
-ParameterName=Receive PDO 0 mapping parameter
+ParameterName=Receive PDO 1 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -322,7 +322,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1601]
-ParameterName=Receive PDO 1 mapping parameter
+ParameterName=Receive PDO 2 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -369,7 +369,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1602]
-ParameterName=Receive PDO 2 mapping parameter
+ParameterName=Receive PDO 3 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -416,7 +416,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1603]
-ParameterName=Receive PDO 3 mapping parameter
+ParameterName=Receive PDO 4 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -463,7 +463,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1800]
-ParameterName=Transmit PDO 0 communication parameters
+ParameterName=Transmit PDO 1 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -496,7 +496,7 @@ LowLimit=0
 HighLimit=255
 
 [1801]
-ParameterName=Transmit PDO 1 communication parameters
+ParameterName=Transmit PDO 2 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -529,7 +529,7 @@ LowLimit=0
 HighLimit=255
 
 [1802]
-ParameterName=Transmit PDO 2 communication parameters
+ParameterName=Transmit PDO 3 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -562,7 +562,7 @@ LowLimit=0
 HighLimit=255
 
 [1803]
-ParameterName=Transmit PDO 3 communication parameters
+ParameterName=Transmit PDO 4 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -595,7 +595,7 @@ LowLimit=0
 HighLimit=255
 
 [1a00]
-ParameterName=Transmit PDO 0 mapping parameter
+ParameterName=Transmit PDO 1 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -642,7 +642,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1a01]
-ParameterName=Transmit PDO 1 mapping parameter
+ParameterName=Transmit PDO 2 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -689,7 +689,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1a02]
-ParameterName=Transmit PDO 2 mapping parameter
+ParameterName=Transmit PDO 3 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -736,7 +736,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1a03]
-ParameterName=Transmit PDO 3 mapping parameter
+ParameterName=Transmit PDO 4 mapping parameter
 ObjectType=9
 SubNumber=5
 
