@@ -16,7 +16,6 @@ class LocalNode(BaseNode):
     def __init__(self, node_id, object_dictionary):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
-        self.data_store = {}
         self._read_callbacks = []
         self._write_callbacks = []
 
@@ -67,16 +66,12 @@ class LocalNode(BaseNode):
             if result is not None:
                 return obj.encode_raw(result)
 
-        # Try stored data
-        try:
-            return self.data_store[index][subindex]
-        except KeyError:
-            # Try ParameterValue in EDS
-            if obj.value is not None:
-                return obj.encode_raw(obj.value)
-            # Try default value
-            if obj.default is not None:
-                return obj.encode_raw(obj.default)
+        # Try ParameterValue in OD
+        if obj.value is not None:
+            return obj.encode_raw(obj.value)
+        # Try default value
+        if obj.default is not None:
+            return obj.encode_raw(obj.default)
 
         # Resource not available
         logger.info("Resource unavailable for 0x%X:%d", index, subindex)
@@ -93,8 +88,7 @@ class LocalNode(BaseNode):
             callback(index=index, subindex=subindex, od=obj, data=data)
 
         # Store data
-        self.data_store.setdefault(index, {})
-        self.data_store[index][subindex] = bytes(data)
+        obj.value = obj.decode_raw(data)
 
     def _find_object(self, index, subindex):
         if index not in self.object_dictionary:
