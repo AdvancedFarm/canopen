@@ -372,7 +372,7 @@ class Variable(object):
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
-                raise ValueError("Value does not fit in specified type")
+                raise ValueError("Value {} does not fit in type: {}".format(value, self.data_type))
         elif self.data_type is None:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
