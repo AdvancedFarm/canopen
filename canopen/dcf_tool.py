@@ -10,14 +10,15 @@ except ImportError:
     from ConfigParser import RawConfigParser
 
 import canopen
+from canopen.objectdictionary.case_insensitive_dict import CaseInsensitiveDict
 
 
-def read_dcf_from_node(network, node_id, eds_file):
+def read_dcf_from_node(network, node_id, eds_file, outfile):
 
     # Create a configparser that preserves comments
-    eds = RawConfigParser(allow_no_value=True)
-    # Also preserve case
-    eds.optionxform = lambda option: option
+    eds = RawConfigParser(allow_no_value=True, dict_type=CaseInsensitiveDict)
+    # Preserve case
+    eds.optionxform = lambda x: x
 
     # TODO: how should we set the bitrate?
     eds['DeviceComissioning'] = {
@@ -67,10 +68,7 @@ def read_dcf_from_node(network, node_id, eds_file):
                 )
                 continue
 
-    root, _ = os.path.splitext(eds_file)
-    dcffile = os.path.join(root, '.dcf')
-
-    with open(dcffile, 'w') as configfile:
+    with open(outfile, 'w') as configfile:
         eds.write(configfile)
 
 def write_dcf_to_node(network, node_id, dcf_file):
@@ -177,6 +175,12 @@ def setup_opts():
     read_cmd.add_argument(
         "edsfile", help=("EDS file for the node from which to read")
     )
+    read_cmd.add_argument(
+        "-o",
+        "--outfile",
+        default='output.dcf',
+        help=("Output dcf file name")
+    )
 
     write_cmd = commands.add_parser(
         "write",
@@ -198,7 +202,7 @@ def main():
         sys.exit(1)
 
     if opts.func == 'read':
-        read_dcf_from_node(network, opts.nodeid, opts.edsfile)
+        read_dcf_from_node(network, opts.nodeid, opts.edsfile, opts.outfile)
     elif opts.func == 'write':
         write_dcf_to_node(network, opts.nodeid, opts.dcffile)
 
