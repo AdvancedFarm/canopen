@@ -33,7 +33,7 @@ def import_eds(source, node_id):
     od = objectdictionary.ObjectDictionary()
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
-        od.node_id = int(eds.get("DeviceComissioning", "NodeID"))
+        od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
 
     for section in eds.sections():
         # Match dummy definitions
@@ -72,6 +72,7 @@ def import_eds(source, node_id):
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
                 last_subindex.data_type = objectdictionary.UNSIGNED8
+                last_subindex.access_type = 'ro'
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 arr.storage_location = storage_location
@@ -201,6 +202,10 @@ def build_variable(eds, section, node_id, index, subindex=0):
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
+    if eds.has_option(section, "ObjFlags"):
+        objflags = eds.get(section, "ObjFlags")
+        if objflags is not '':
+            var.objflags = int(objflags, 0)
     return var
 
 

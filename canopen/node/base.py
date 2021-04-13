@@ -20,5 +20,6 @@ class BaseNode(object):
             object_dictionary = objectdictionary.import_od(
                 object_dictionary, node_id)
         self.object_dictionary = object_dictionary
+        self.od = self.object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id

@@ -68,6 +68,33 @@ DataType=0x0005
 AccessType=ro
 PDOMapping=1
 
+[1010]
+SubNumber=2
+ObjectType=9
+ParameterName=Store command
+
+[1010sub0]
+ParameterName=Number of entries
+ParameterValue=0x01
+ObjectType=7
+DataType=5
+AccessType=ro
+LowLimit=0
+HighLimit=0xFF
+PDOMapping=0
+DefaultValue=1
+
+[1010sub1]
+ParameterName=Save all parameters
+ParameterValue=0x00000001
+ObjectType=7
+DataType=7
+AccessType=rw
+LowLimit=0x65766173
+HighLimit=0x65766173
+PDOMapping=0
+ObjFlags=0x1
+
 [1018]
 ParameterName=Identity object
 ObjectType=0x9
@@ -143,7 +170,7 @@ PDOMapping=0
 ParameterValue=0x0000
 
 [1400]
-ParameterName=Receive PDO 0 Communication Parameter
+ParameterName=Receive PDO 1 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -176,7 +203,7 @@ LowLimit=0
 HighLimit=255
 
 [1401]
-ParameterName=Receive PDO 1 Communication Parameter
+ParameterName=Receive PDO 2 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -209,7 +236,7 @@ LowLimit=0
 HighLimit=255
 
 [1402]
-ParameterName=Receive PDO 2 Communication Parameter
+ParameterName=Receive PDO 3 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -242,7 +269,7 @@ LowLimit=0
 HighLimit=255
 
 [1403]
-ParameterName=Receive PDO 3 Communication Parameter
+ParameterName=Receive PDO 4 Communication Parameter
 ObjectType=9
 SubNumber=3
 
@@ -275,7 +302,7 @@ LowLimit=0
 HighLimit=255
 
 [1600]
-ParameterName=Receive PDO 0 mapping parameter
+ParameterName=Receive PDO 1 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -322,7 +349,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1601]
-ParameterName=Receive PDO 1 mapping parameter
+ParameterName=Receive PDO 2 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -369,7 +396,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1602]
-ParameterName=Receive PDO 2 mapping parameter
+ParameterName=Receive PDO 3 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -416,7 +443,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1603]
-ParameterName=Receive PDO 3 mapping parameter
+ParameterName=Receive PDO 4 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -463,7 +490,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1800]
-ParameterName=Transmit PDO 0 communication parameters
+ParameterName=Transmit PDO 1 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -496,7 +523,7 @@ LowLimit=0
 HighLimit=255
 
 [1801]
-ParameterName=Transmit PDO 1 communication parameters
+ParameterName=Transmit PDO 2 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -529,7 +556,7 @@ LowLimit=0
 HighLimit=255
 
 [1802]
-ParameterName=Transmit PDO 2 communication parameters
+ParameterName=Transmit PDO 3 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -562,7 +589,7 @@ LowLimit=0
 HighLimit=255
 
 [1803]
-ParameterName=Transmit PDO 3 communication parameters
+ParameterName=Transmit PDO 4 communication parameters
 ObjectType=9
 SubNumber=3
 
@@ -595,7 +622,7 @@ LowLimit=0
 HighLimit=255
 
 [1a00]
-ParameterName=Transmit PDO 0 mapping parameter
+ParameterName=Transmit PDO 1 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -641,8 +668,24 @@ AccessType=RW
 PDOMapping=0
 DefaultValue=0
 
+[1a00sub5]
+ParameterName=TPDO 1 mapping information 5
+ObjectType=7
+DataType=7
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
+[1a00sub6]
+ParameterName=TPDO 1 mapping information 6
+ObjectType=7
+DataType=7
+AccessType=RW
+PDOMapping=0
+DefaultValue=0
+
 [1a01]
-ParameterName=Transmit PDO 1 mapping parameter
+ParameterName=Transmit PDO 2 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -689,7 +732,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1a02]
-ParameterName=Transmit PDO 2 mapping parameter
+ParameterName=Transmit PDO 3 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -736,7 +779,7 @@ PDOMapping=0
 DefaultValue=0
 
 [1a03]
-ParameterName=Transmit PDO 3 mapping parameter
+ParameterName=Transmit PDO 4 mapping parameter
 ObjectType=9
 SubNumber=5
 
@@ -835,16 +878,6 @@ DataType=0x0001
 AccessType=rw
 PDOMapping=1
 
-[2020]
-ParameterName=Complex data type
-ObjectType=0x7
-AccessType=RW
-DataType=0x40
-DefaultValue=0x0
-LowLimit=0x3
-HighLimit=0x1
-PDOMapping=0
-
 [3002]
 ParameterName=Sensor Sampling Rate (Hz)
 ObjectType=0x7
@@ -899,3 +932,41 @@ DataType=0x0008
 AccessType=ro
 DefaultValue=0
 PDOMapping=1
+
+[6040]
+ParameterName=controlword
+ObjectType=7
+DataType=6
+AccessType=rww
+LowLimit=0
+HighLimit=0xFFFF
+PDOMapping=1
+ObjFlags=0x1
+
+[6041]
+ParameterName=statusword
+ObjectType=7
+DataType=6
+AccessType=ro
+LowLimit=0
+HighLimit=0xFFFF
+PDOMapping=1
+
+[606C]
+ParameterName=Velocity
+ObjectType=7
+DataType=4
+AccessType=ro
+LowLimit=-20000
+HighLimit=20000
+PDOMapping=1
+
+[60FF]
+ParameterName=Target speed
+ObjectType=7
+DataType=4
+AccessType=rww
+LowLimit=-20000
+HighLimit=20000
+PDOMapping=1
+ObjFlags=0x1

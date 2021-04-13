@@ -155,6 +155,9 @@ class Record(MutableMapping):
     def __eq__(self, other):
         return self.index == other.index
 
+    def __repr__(self):
+        return "Record 0x{:04x} {}".format(self.index, self.name)
+
     def add_member(self, variable):
         """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
@@ -212,6 +215,9 @@ class Array(Mapping):
 
     def __eq__(self, other):
         return self.index == other.index
+
+    def __repr__(self):
+        return "Array 0x{:04x} {}".format(self.index, self.name)
 
     def add_member(self, variable):
         """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
@@ -272,6 +278,8 @@ class Variable(object):
         self.bit_definitions = {}
         #: Storage location of index
         self.storage_location = None
+        #: ObjectFlags defined in DSP306 (4.5.3.2 Specific Flags)
+        self.objflags = None
 
     def __eq__(self, other):
         return (self.index == other.index and
@@ -283,6 +291,9 @@ class Variable(object):
         else:
             return 8
 
+    def __repr__(self):
+        return "Variable 0x{:04x}:{:02x} {}".format(self.index, self.subindex, self.name)
+
     @property
     def writable(self):
         return "w" in self.access_type
@@ -290,6 +301,20 @@ class Variable(object):
     @property
     def readable(self):
         return "r" in self.access_type or self.access_type == "const"
+
+    @property
+    def refuse_write_on_download(self):
+        if self.objflags is None:
+            return False
+        else:
+            return self.objflags & 0x01 > 0
+
+    @property
+    def refuse_read_on_scan(self):
+        if self.objflags is None:
+            return False
+        else:
+            return self.objflags & 0x02 > 0
 
     def add_value_description(self, value, descr):
         """Associate a value with a string description.
@@ -347,7 +372,7 @@ class Variable(object):
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
-                raise ValueError("Value does not fit in specified type")
+                raise ValueError("Value {} does not fit in type: {}".format(value, self.data_type))
         elif self.data_type is None:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
